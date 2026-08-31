@@ -36,4 +36,6 @@ yarn-error.log*
 # public/robots.txt
 # public/sitemap.xml
 
-/.firebase
+/.firebase.netlify/
+deploy_key
+deploy_key.pub

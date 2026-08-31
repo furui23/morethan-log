@@ -2,7 +2,7 @@
 
 <img width="1715" alt="image" src="https://user-images.githubusercontent.com/72514247/209824600-ca9c8acc-6d2d-4041-9931-43e34b8a9a5f.png">
 
-Next.js static blog using Notion as a Content Management System (CMS). Supports both Blog format Post as well as Page format for Resume. Deployed using Vercel.
+Next.js static blog using Notion as a Content Management System (CMS). Supports both Blog format Post as well as Page format for Resume. Deployed using Vercel or Netlify.
 
 [Demo Blog](https://morethan-log.vercel.app) | [Demo Resume](https://morethan-log.vercel.app/resume)
 
@@ -35,7 +35,7 @@ Next.js static blog using Notion as a Content Management System (CMS). Supports 
 3. Duplicate [this Notion template](https://morethanmin.notion.site/12c38b5f459d4eb9a759f92fba6cea36?v=2e7962408e3842b2a1a801bf3546edda), and Share to Web.
 4. Copy the Web Link and keep note of the Notion Page Id from the Link which will be in this format [username.notion.site/`NOTION_PAGE_ID`?v=`VERSION_ID`]. 
 5. Clone your forked repo and then customize `site.config.js` based on your preference.
-6. Deploy on Vercel, with the following environment variables.
+6. Deploy on **Vercel** or **Netlify**, with the following environment variables.
 
    - `NOTION_PAGE_ID` (Required): The Notion page Id got from the Share to Web URL. This is not the entire URL, but just the NOTION_PAGE_ID part as shown above.
    - `NEXT_PUBLIC_GOOGLE_MEASUREMENT_ID` : For Google analytics Plugin.
@@ -87,6 +87,46 @@ Next.js static blog using Notion as a Content Management System (CMS). Supports 
    <img src='https://github.com/jhk0530/morethan-log/assets/6457691/3876a273-a270-47ef-a2ad-663519d9e537' width = '500'>
 
 </details>
+
+## Deploy on Netlify
+
+This project also supports deploying on **Netlify** with minimal configuration.
+
+### Prerequisites
+
+- A [Notion](https://notion.so) account
+- A [Netlify](https://www.netlify.com) account
+- A forked copy of this repository
+
+### Steps
+
+1. **Fork** this repo to your GitHub profile.
+2. **Duplicate** [this Notion template](https://morethanmin.notion.site/12c38b5f459d4eb9a759f92fba6cea36?v=2e7962408e3842b2a1a801bf3546edda) and **Share to Web**.
+3. Copy the Web Link and extract the `NOTION_PAGE_ID` from it.
+4. **Clone** your forked repo and customize `site.config.js`:
+   - Update `profile`, `blog`, `link` (your Netlify site URL), and other settings.
+   - Set `notionConfig.pageId` to your Notion page ID.
+5. Go to [Netlify Dashboard](https://app.netlify.com) → **Add new site** → **Import an existing project**.
+6. Select your forked repository and configure the build settings:
+
+   | Setting          | Value                          |
+   | ---------------- | ------------------------------ |
+   | Base directory   | `` (leave empty)               |
+   | Build command    | `yarn build`                   |
+   | Publish directory| `.next`                        |
+   | Node version     | `22`                           |
+
+7. Add the following **Environment Variables** in Netlify settings:
+
+   - `NOTION_PAGE_ID` *(Required)* — Your Notion page ID
+   - `NEXT_PUBLIC_GOOGLE_MEASUREMENT_ID` *(Optional)* — For Google Analytics
+   - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` *(Optional)* — For Google Search Console
+   - `NEXT_PUBLIC_NAVER_SITE_VERIFICATION` *(Optional)* — For Naver Search Advisor
+   - `NEXT_PUBLIC_UTTERANCES_REPO` *(Optional)* — For Utterances comments
+
+8. Click **Deploy site** and wait for the build to complete.
+
+That's it! Your blog will be live at your Netlify URL.
 
 ## FAQ
 

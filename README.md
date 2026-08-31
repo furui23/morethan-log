@@ -119,6 +119,7 @@ This project also supports deploying on **Netlify** with minimal configuration.
 7. Add the following **Environment Variables** in Netlify settings:
 
    - `NOTION_PAGE_ID` *(Required)* — Your Notion page ID
+   - `NOTION_TOKEN` *(Required)* — Your Notion Integration Token (see setup guide below)
    - `NEXT_PUBLIC_GOOGLE_MEASUREMENT_ID` *(Optional)* — For Google Analytics
    - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` *(Optional)* — For Google Search Console
    - `NEXT_PUBLIC_NAVER_SITE_VERIFICATION` *(Optional)* — For Naver Search Advisor
@@ -127,6 +128,16 @@ This project also supports deploying on **Netlify** with minimal configuration.
 8. Click **Deploy site** and wait for the build to complete.
 
 That's it! Your blog will be live at your Netlify URL.
+
+### Setting up a Notion Integration (Required)
+
+This project uses the Notion API to fetch content, which requires an Integration Token.
+
+1. Go to https://www.notion.so/my-integrations and click **+ New integration**.
+2. Name it (e.g., `morethan-log`) and select your workspace.
+3. Click **Submit** and copy the **Internal Integration Token** (starts with `ntn_`).
+4. Go to your Notion database page → click **...** → **Connect to** → select your integration → **Connect**.
+5. Add `NOTION_TOKEN` as an environment variable in Netlify with the copied token.
 
 ## FAQ
 

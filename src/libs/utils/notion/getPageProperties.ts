@@ -9,6 +9,10 @@ async function getPageProperties(
   schema: CollectionPropertySchemaMap
 ) {
   const api = new NotionAPI()
+  const notionHeaders = {
+    "User-Agent": "notion-agent/1.0",
+    "x-notion-version": "2.2.4",
+  }
   const blockEntry = block?.[id]?.value as any
   const blockValue = blockEntry?.value ?? blockEntry
   const rawProperties = Object.entries(blockValue?.properties || [])
@@ -59,15 +63,16 @@ async function getPageProperties(
           for (let i = 0; i < rawUsers.length; i++) {
             if (rawUsers[i][0][1]) {
               const userId = rawUsers[i][0]
-              const res: any = await api.getUsers(userId)
+              const res: any = await api.getUsers(userId, { headers: notionHeaders })
               const resValue =
-                res?.recordMapWithRoles?.notion_user?.[userId[1]]?.value
+                res?.recordMapWithRoles?.notion_user?.[userId[0]]?.value ??
+                res?.recordMap?.notion_user?.[userId[0]]?.value
               const user = {
-                id: resValue?.id,
+                id: resValue?.id || null,
                 name:
                   resValue?.name ||
                   `${resValue?.family_name}${resValue?.given_name}` ||
-                  undefined,
+                  null,
                 profile_photo: resValue?.profile_photo || null,
               }
               users.push(user)

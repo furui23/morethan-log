@@ -2,27 +2,52 @@ import { CONFIG } from "site.config"
 import { NotionAPI } from "notion-client"
 import { idToUuid } from "notion-utils"
 
-import getAllPageIds from "src/libs/utils/notion/getAllPageIds"
 import getPageProperties from "src/libs/utils/notion/getPageProperties"
 import { TPosts } from "src/types"
 
-/**
- * @param {{ includePages: boolean }} - false: posts only / true: include pages
- */
+/** Convert to UUID format only if not already UUID */
+function ensureUuid(id: string): string {
+  if (id.length > 32) return id // already UUID format (36 chars)
+  return idToUuid(id)
+}
 
-// TODO: react query를 사용해서 처음 불러온 뒤로는 해당데이터만 사용하도록 수정
+/**
+ * Notion API v3 requires specific headers. notion-client@6.x uses got
+ * which sends a default User-Agent that Notion rejects with 403.
+ * We patch NotionAPI.fetch to add the required headers.
+ */
+function createNotionAPI() {
+  const api = new NotionAPI({ authToken: CONFIG.notionConfig.api })
+  const origFetch = api.fetch.bind(api)
+  api.fetch = function (opts: any) {
+    return origFetch({
+      ...opts,
+      gotOptions: {
+        ...opts.gotOptions,
+        headers: {
+          ...opts.gotOptions?.headers,
+          "User-Agent": "notion-agent/1.0",
+          "x-notion-version": "2.2.4",
+        },
+      },
+    })
+  }
+  return api
+}
+
 export const getPosts = async () => {
   let id = CONFIG.notionConfig.pageId as string
-  const api = new NotionAPI({ authToken: CONFIG.notionConfig.api })
+  const api = createNotionAPI()
 
-  const response = await api.getPage(id)
-  id = idToUuid(id)
-  const collectionValue = Object.values(response.collection)[0]?.value as any
+  // Step 1: Get page metadata to find collection info
+  const pageResponse = await api.getPage(id)
+  id = ensureUuid(id)
+
+  const collectionValue = Object.values(pageResponse.collection)[0]?.value as any
   const collection = collectionValue?.value ?? collectionValue
-  const block = response.block
   const schema = collection?.schema
 
-  const blockValue = (block[id].value as any)?.value ?? block[id].value
+  const blockValue = (pageResponse.block[id]?.value as any)?.value ?? pageResponse.block[id]?.value
   const rawMetadata = blockValue
 
   // Check Type
@@ -31,32 +56,62 @@ export const getPosts = async () => {
     rawMetadata?.type !== "collection_view"
   ) {
     return []
-  } else {
-    // Construct Data
-    const pageIds = getAllPageIds(response)
-    const data = []
-    for (let i = 0; i < pageIds.length; i++) {
-      const id = pageIds[i]
-      const properties = (await getPageProperties(id, block, schema)) || null
-      // Add fullwidth, createdtime to properties
-      const pageBlockValue = (block[id].value as any)?.value ?? block[id].value
-      properties.createdTime = new Date(
-        pageBlockValue?.created_time
-      ).toString()
-      properties.fullWidth =
-        (pageBlockValue?.format as any)?.page_full_width ?? false
-
-      data.push(properties)
-    }
-
-    // Sort by date
-    data.sort((a: any, b: any) => {
-      const dateA: any = new Date(a?.date?.start_date || a.createdTime)
-      const dateB: any = new Date(b?.date?.start_date || b.createdTime)
-      return dateB - dateA
-    })
-
-    const posts = data as TPosts
-    return posts
   }
+
+  const viewIds = rawMetadata?.view_ids
+  if (!viewIds || viewIds.length === 0) {
+    return []
+  }
+
+  const collectionId = collection?.id ?? rawMetadata?.collection_id
+  if (!collectionId) {
+    return []
+  }
+
+  // Step 2: Fetch all page data via queryCollection
+  const collectionData = await api.getCollectionData(
+    ensureUuid(collectionId),
+    ensureUuid(viewIds[0]),
+    {},
+    {}
+  )
+
+  // Step 3: Merge blocks and collect page IDs
+  const mergedBlock = {
+    ...pageResponse.block,
+    ...collectionData.recordMap.block,
+  }
+
+  // Page IDs are all block keys except the main collection_view_page
+  const allBlockIds = Object.keys(mergedBlock)
+  const pageIds = allBlockIds.filter((key) => key !== id)
+
+  if (pageIds.length === 0) {
+    return []
+  }
+
+  // Step 4: Build posts from page data
+  const data = []
+  for (const pageId of pageIds) {
+    const properties = (await getPageProperties(pageId, mergedBlock, schema)) || null
+    if (!properties) continue
+
+    const pageBlockValue = (mergedBlock[pageId]?.value as any)?.value ?? mergedBlock[pageId]?.value
+    properties.createdTime = new Date(
+      pageBlockValue?.created_time
+    ).toString()
+    properties.fullWidth =
+      (pageBlockValue?.format as any)?.page_full_width ?? false
+
+    data.push(properties)
+  }
+
+  // Sort by date
+  data.sort((a: any, b: any) => {
+    const dateA: any = new Date(a?.date?.start_date || a.createdTime)
+    const dateB: any = new Date(b?.date?.start_date || b.createdTime)
+    return dateB - dateA
+  })
+
+  return data as TPosts
 }

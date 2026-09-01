@@ -11,15 +11,28 @@ export default function getAllPageIds(
   let pageIds: ID[] = []
   if (viewId) {
     const vId = idToUuid(viewId)
-    pageIds = views[vId]?.blockIds
+    pageIds = views?.[vId]?.blockIds ?? []
   } else {
     const pageSet = new Set<ID>()
-    // * type not exist
-    Object.values(views).forEach((view: any) => {
-      view?.collection_group_results?.blockIds?.forEach((id: ID) =>
-        pageSet.add(id)
-      )
-    })
+
+    // First try collection_group_results from collection_query
+    if (views) {
+      Object.values(views).forEach((view: any) => {
+        view?.collection_group_results?.blockIds?.forEach((id: ID) =>
+          pageSet.add(id)
+        )
+      })
+    }
+
+    // Fallback: if collection_query is empty (Notion API v3 block nesting issue),
+    // extract page IDs from collection_view.page_sort
+    if (pageSet.size === 0 && response.collection_view) {
+      Object.values(response.collection_view).forEach((cv: any) => {
+        const viewValue = (cv?.value as any)?.value ?? cv?.value
+        viewValue?.page_sort?.forEach((id: ID) => pageSet.add(id))
+      })
+    }
+
     pageIds = [...pageSet]
   }
   return pageIds
